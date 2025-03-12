@@ -9,14 +9,12 @@ import (
 )
 
 type Lox struct {
-	hadError bool
-	script   string
+	script string
 }
 
 func NewLox(script string) *Lox {
 	return &Lox{
-		hadError: false,
-		script:   script,
+		script: script,
 	}
 }
 func (l *Lox) RunFile() error {
@@ -58,8 +56,4 @@ func (l *Lox) Run() {
 
 func (l *Lox) run(source string) error {
 	return nil
-}
-
-func (l *Lox) Report(line int, where, msg string) error {
-	return fmt.Errorf("[line %d] Error %s:%s", line, where, msg)
 }
