@@ -3,20 +3,20 @@ package token
 import "fmt"
 
 type Token struct {
-	typ     TokenType
-	lexeme  string
-	literal any
-	line    int
+	Typ     TokenType
+	Lexeme  string
+	Literal any
+	Line    int
 }
 
 func NewToken(typ TokenType, lexeme string, literal any, line int) *Token {
 	return &Token{
-		typ:     typ,
-		lexeme:  lexeme,
-		literal: literal,
-		line:    line,
+		Typ:     typ,
+		Lexeme:  lexeme,
+		Literal: literal,
+		Line:    line,
 	}
 }
 func (t *Token) String() string {
-	return fmt.Sprintf("%s %s %v", t.typ, t.lexeme, t.literal)
+	return fmt.Sprintf("%s %s %v", t.Typ, t.Lexeme, t.Literal)
 }
