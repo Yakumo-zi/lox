@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	er "lox/errors"
+	"lox/scanner"
 	"os"
 )
 
@@ -55,5 +57,16 @@ func (l *Lox) Run() {
 }
 
 func (l *Lox) run(source string) error {
+	scanner := scanner.NewSacnner(source)
+	tokens := scanner.ScanTokens()
+	for i, tok := range tokens {
+		fmt.Printf("%d:%+v\n", i, tok)
+
+	}
+	if len(er.Errors) != 0 {
+		for _, err := range er.Errors {
+			fmt.Printf("%+v\n", err)
+		}
+	}
 	return nil
 }

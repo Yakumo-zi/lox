@@ -18,7 +18,7 @@ type Scanner struct {
 func NewSacnner(source string) *Scanner {
 	return &Scanner{
 		source: source,
-		tokens: make([]*token.Token, 10),
+		tokens: make([]*token.Token, 0, 10),
 	}
 }
 
@@ -81,10 +81,23 @@ func (s *Scanner) scanToken() {
 	default:
 		if s.isDigital(ch) {
 			s.number()
+		} else if s.isAlpha(ch) {
+			s.identifier()
 		} else {
 			errors.Report(s.line, string(ch), "Unexpected character.")
 		}
 	}
+}
+func (s *Scanner) identifier() {
+	for s.isAlphaNumeric(s.peek()) {
+		s.advance()
+	}
+	text := s.source[s.start:s.current]
+	typ, ok := token.KeyWords[text]
+	if !ok {
+		typ = token.IDENTIFIER
+	}
+	s.addToken(typ)
 }
 func (s *Scanner) number() {
 	for s.isDigital(s.peek()) {
@@ -126,6 +139,13 @@ func (s *Scanner) match(expected byte) bool {
 	s.current++
 	return true
 }
+func (s *Scanner) isAlphaNumeric(c byte) bool {
+	return s.isAlpha(c) || s.isDigital(c)
+}
+func (s *Scanner) isAlpha(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
+}
+
 func (s *Scanner) isDigital(c byte) bool {
 	return c >= '0' && c <= '9'
 }
