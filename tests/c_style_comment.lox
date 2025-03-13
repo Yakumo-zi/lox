@@ -1,0 +1,8 @@
+/*
+    this is c style comment
+    parser will ignore it.
+*/
+
+// this is a statement
+
+print "Hello,World"
