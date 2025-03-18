@@ -8,16 +8,16 @@ import (
 
 func TestAstPrinter(t *testing.T) {
 	var expr Expr
-	expr = BinaryNode{
-		Left: UnaryNode{
+	expr = &BinaryNode{
+		Left: &UnaryNode{
 			Op: *token.NewToken(token.MINUS, "-", nil, 1),
-			Right: LiteralNode{
+			Right: &LiteralNode{
 				Value: 123,
 			},
 		},
 		Op: *token.NewToken(token.STAR, "*", nil, 1),
-		Right: GroupNode{
-			LiteralNode{
+		Right: &GroupNode{
+			&LiteralNode{
 				Value: 45.67,
 			},
 		},

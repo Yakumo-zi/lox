@@ -7,32 +7,33 @@ import (
 
 func AstPrinter(expr Expr) string {
 	switch expr := expr.(type) {
-	case BinaryNode:
+	case *BinaryNode:
 		return bianryPrinter(expr)
-	case UnaryNode:
+	case *UnaryNode:
 		return unaryPrinter(expr)
-	case GroupNode:
+	case *GroupNode:
 		return groupingPrinter(expr)
-	case LiteralNode:
+	case *LiteralNode:
 		return literalPrinter(expr)
+	default:
+		return fmt.Sprintf("not a valid node, %+#v", expr)
 	}
-	return ""
 }
-func bianryPrinter(expr BinaryNode) string {
+func bianryPrinter(expr *BinaryNode) string {
 	left := AstPrinter(expr.Left)
 	op := expr.Op.Lexeme
 	right := AstPrinter(expr.Right)
 	return fmt.Sprintf("(%s %s %s)", op, left, right)
 }
-func unaryPrinter(expr UnaryNode) string {
+func unaryPrinter(expr *UnaryNode) string {
 	op := expr.Op.Lexeme
 	right := AstPrinter(expr.Right)
 	return fmt.Sprintf("(%s %s)", op, right)
 }
-func groupingPrinter(expr GroupNode) string {
+func groupingPrinter(expr *GroupNode) string {
 	str := AstPrinter(expr.Expression)
 	return fmt.Sprintf("(%s)", str)
 }
-func literalPrinter(expr LiteralNode) string {
+func literalPrinter(expr *LiteralNode) string {
 	return util.When(expr.Value == nil, "nil", fmt.Sprint(expr.Value))
 }
