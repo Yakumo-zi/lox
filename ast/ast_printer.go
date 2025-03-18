@@ -15,9 +15,17 @@ func AstPrinter(expr Expr) string {
 		return groupingPrinter(expr)
 	case *LiteralNode:
 		return literalPrinter(expr)
+	case *ConditionNode:
+		return conditionPrinter(expr)
 	default:
 		return fmt.Sprintf("not a valid node, %+#v", expr)
 	}
+}
+func conditionPrinter(expr *ConditionNode) string {
+	condition := AstPrinter(expr.Condition)
+	trueVal := AstPrinter(expr.Truth)
+	falseVal := AstPrinter(expr.False)
+	return fmt.Sprintf("(%s ? %s : %s)", condition, trueVal, falseVal)
 }
 func bianryPrinter(expr *BinaryNode) string {
 	left := AstPrinter(expr.Left)

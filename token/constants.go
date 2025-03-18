@@ -24,6 +24,9 @@ const (
 	LESS
 	LESS_EQUAL
 
+	COLON
+	QUESTION_MARK
+
 	IDENTIFIER
 	STRING
 	NUMBER
@@ -147,6 +150,10 @@ func (t TokenType) String() string {
 		return "WHILE"
 	case EOF:
 		return "EOF"
+	case COLON:
+		return "COLON"
+	case QUESTION_MARK:
+		return "QUESTION_MARK"
 	default:
 		return "UNKNOWN"
 	}

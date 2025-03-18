@@ -18,10 +18,33 @@ func NewParser(tokens []*token.Token) *Parser {
 	}
 }
 func (p *Parser) Parse() ast.Expr {
-	return p.expression()
+	return p.comma()
+}
+func (p *Parser) comma() ast.Expr {
+	expr := p.expression()
+	for p.match(token.COMMA) {
+		expr = p.expression()
+	}
+	return expr
 }
 func (p *Parser) expression() ast.Expr {
-	return p.equality()
+	return p.ternary()
+}
+func (p *Parser) ternary() ast.Expr {
+	expr := p.equality()
+	if p.match(token.QUESTION_MARK) {
+		left := p.expression()
+		if !p.match(token.COLON) {
+			errors.Error(p.peek(), "Expect a ':'")
+		}
+		right := p.expression()
+		expr = &ast.ConditionNode{
+			Condition: expr,
+			Truth:     left,
+			False:     right,
+		}
+	}
+	return expr
 }
 func (p *Parser) equality() ast.Expr {
 	expr := p.comparison()
@@ -108,7 +131,7 @@ func (p *Parser) primary() ast.Expr {
 		}
 	}
 	if p.match(token.LEFT_PAREN) {
-		expr := p.expression()
+		expr := p.comma()
 		p.consume(token.RIGHT_PAREN, "Expect ')' after expression.")
 		return &ast.GroupNode{
 			Expression: expr,

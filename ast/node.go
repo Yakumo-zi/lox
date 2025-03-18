@@ -19,3 +19,8 @@ type GroupNode struct {
 type LiteralNode struct {
 	Value any
 }
+type ConditionNode struct {
+	Condition Expr
+	Truth     Expr
+	False     Expr
+}
