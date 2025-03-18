@@ -35,7 +35,7 @@ func (p *Parser) ternary() ast.Expr {
 	if p.match(token.QUESTION_MARK) {
 		left := p.expression()
 		if !p.match(token.COLON) {
-			errors.Error(p.peek(), "Expect a ':'")
+			errors.Error(p.peek(), "Expect a ':'.")
 		}
 		right := p.expression()
 		expr = &ast.ConditionNode{
