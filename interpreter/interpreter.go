@@ -34,7 +34,9 @@ func evalUnary(expr *ast.UnaryNode) any {
 	case token.BANG:
 		return !isTruthy(right)
 	case token.MINUS:
-		checkOp(expr.Op, right)
+		if ok := checkOp(expr.Op, right); !ok {
+			return nil
+		}
 		return -right.(float64)
 	}
 	return nil
@@ -44,42 +46,74 @@ func evalBinary(expr *ast.BinaryNode) any {
 	right := Eval(expr.Right)
 	switch expr.Op.Typ {
 	case token.MINUS:
-		checkOps(expr.Op, left, right)
+		if ok := checkOps(expr.Op, left, right); !ok {
+			return nil
+		}
 		return left.(float64) - right.(float64)
 	case token.PLUS:
 		switch left.(type) {
 		case string:
-			if _, ok := right.(string); !ok {
-				errors.Error(&expr.Op, fmt.Sprintf("%+v Operands must be two numbers or two strings.", expr.Op))
-				return nil
+			if right, ok := right.(float64); ok {
+				return fmt.Sprintf("%s%+v", left, right)
 			}
-			return left.(string) + right.(string)
+			if _, ok := right.(string); ok {
+				return left.(string) + right.(string)
+			}
+			errors.Error(&expr.Op, fmt.Sprintf("%+v Operands must be two numbers or two strings.", expr.Op))
+
 		case float64:
-			if _, ok := right.(float64); !ok {
-				errors.Error(&expr.Op, fmt.Sprintf("%+v Operands must be two numbers or two strings.", expr.Op))
-				return nil
+			if right, ok := right.(string); ok {
+				return fmt.Sprintf("%+v%s", left, right)
 			}
-			return left.(float64) + right.(float64)
+			if _, ok := right.(float64); ok {
+
+				return left.(float64) + right.(float64)
+			}
+			errors.Error(&expr.Op, fmt.Sprintf("%+v Operands must be two numbers or two strings.", expr.Op))
 		}
 		errors.Error(&expr.Op, fmt.Sprintf("%+v Operands must be two numbers or two strings.", expr.Op))
 		return nil
 	case token.SLASH:
-		checkOps(expr.Op, left, right)
+		if ok := checkOps(expr.Op, left, right); !ok {
+			return nil
+		}
 		return left.(float64) / right.(float64)
 	case token.STAR:
-		checkOps(expr.Op, left, right)
+		if ok := checkOps(expr.Op, left, right); !ok {
+			return nil
+		}
 		return left.(float64) * right.(float64)
 	case token.GREATER:
-		checkOps(expr.Op, left, right)
+		if ok := checkOps(expr.Op, left, right); !ok {
+			return nil
+		}
+		if left, ok := left.(string); ok {
+			return strings.Compare(left, right.(string)) > 0
+		}
 		return left.(float64) > right.(float64)
 	case token.GREATER_EQUAL:
-		checkOps(expr.Op, left, right)
+		if ok := checkOps(expr.Op, left, right); !ok {
+			return nil
+		}
+		if left, ok := left.(string); ok {
+			return strings.Compare(left, right.(string)) >= 0
+		}
 		return left.(float64) >= right.(float64)
 	case token.LESS:
-		checkOps(expr.Op, left, right)
+		if ok := checkOps(expr.Op, left, right); !ok {
+			return nil
+		}
+		if left, ok := left.(string); ok {
+			return strings.Compare(left, right.(string)) < 0
+		}
 		return left.(float64) < right.(float64)
 	case token.LESS_EQUAL:
-		checkOps(expr.Op, left, right)
+		if ok := checkOps(expr.Op, left, right); !ok {
+			return nil
+		}
+		if left, ok := left.(string); ok {
+			return strings.Compare(left, right.(string)) <= 0
+		}
 		return left.(float64) <= right.(float64)
 	case token.EQUAL_EQUAL:
 		return isEqual(left, right)
@@ -113,22 +147,33 @@ func isEqual(left, right any) bool {
 		return false
 	}
 }
-func checkOp(tok token.Token, operand any) {
+func checkOp(tok token.Token, operand any) bool {
 	if _, ok := operand.(float64); ok {
-		return
+		return true
 	}
-	errors.Error(&tok, fmt.Sprintf("%+v Operand must be a number", tok))
+	errors.Error(&tok, fmt.Sprintf("%+v Operand must be a number", tok.Lexeme))
+	return false
 }
-func checkOps(tok token.Token, left, right any) {
-	if _, ok := left.(float64); !ok {
-		errors.Error(&tok, fmt.Sprintf("%+v %+v %+v , Operands must be a number", left, tok, right))
-		return
-	}
-	if _, ok := right.(float64); !ok {
-		errors.Error(&tok, fmt.Sprintf("%+v %+v %+v , Operands must be a number", left, tok, right))
-		return
-	}
+func checkOps(tok token.Token, left, right any) bool {
 
+	if _, ok := left.(float64); ok {
+		if right, ok := right.(float64); !ok {
+			errors.Error(&tok, fmt.Sprintf("%+v %+v %+v , Operands must be  number or string", left, tok.Lexeme, right))
+			return false
+		} else if right == 0 {
+			errors.Error(&tok, fmt.Sprintf("%+v %+v %+v , Devide zero!", left, tok.Lexeme, right))
+			return false
+		}
+	} else if _, ok = left.(string); ok {
+		if right, ok := right.(string); !ok {
+			errors.Error(&tok, fmt.Sprintf("%+v %+v %+v , Operands must be  number or string", left, tok.Lexeme, right))
+			return false
+		}
+	} else {
+		errors.Error(&tok, fmt.Sprintf("%+v %+v %+v , Operands must be  number or string", left, tok.Lexeme, right))
+		return false
+	}
+	return true
 }
 func isTruthy(val any) bool {
 	if val == nil {

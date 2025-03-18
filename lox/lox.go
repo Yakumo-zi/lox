@@ -66,7 +66,7 @@ func (l *Lox) run(source string) error {
 	}
 	par := parser.NewParser(tokens)
 	expr := par.Parse()
-	fmt.Printf("%+v\n", interpreter.Eval(expr))
+	fmt.Printf("%#v\n", interpreter.Eval(expr))
 	if len(er.Errors) != 0 {
 		for _, err := range er.Errors {
 			fmt.Printf("%+v\n", err)
