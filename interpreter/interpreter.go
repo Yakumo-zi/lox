@@ -59,7 +59,7 @@ func evalBinary(expr *ast.BinaryNode) any {
 			if _, ok := right.(string); ok {
 				return left.(string) + right.(string)
 			}
-			errors.Error(&expr.Op, fmt.Sprintf("%+v Operands must be two numbers or two strings.", expr.Op))
+			errors.Error(&expr.Op, fmt.Sprintf("%+v Operands must be  numbers or strings.", expr.Op))
 
 		case float64:
 			if right, ok := right.(string); ok {
@@ -69,9 +69,9 @@ func evalBinary(expr *ast.BinaryNode) any {
 
 				return left.(float64) + right.(float64)
 			}
-			errors.Error(&expr.Op, fmt.Sprintf("%+v Operands must be two numbers or two strings.", expr.Op))
+			errors.Error(&expr.Op, fmt.Sprintf("%+v Operands must be  numbers or  strings.", expr.Op))
 		}
-		errors.Error(&expr.Op, fmt.Sprintf("%+v Operands must be two numbers or two strings.", expr.Op))
+		errors.Error(&expr.Op, fmt.Sprintf("%+v Operands must be  numbers or  strings.", expr.Op))
 		return nil
 	case token.SLASH:
 		if ok := checkOps(expr.Op, left, right); !ok {
@@ -158,7 +158,7 @@ func checkOps(tok token.Token, left, right any) bool {
 
 	if _, ok := left.(float64); ok {
 		if right, ok := right.(float64); !ok {
-			errors.Error(&tok, fmt.Sprintf("%+v %+v %+v , Operands must be  number or string", left, tok.Lexeme, right))
+			errors.Error(&tok, fmt.Sprintf("%+v %+v %+v , Operands must be two numbers or two strings", left, tok.Lexeme, right))
 			return false
 		} else if right == 0 {
 			errors.Error(&tok, fmt.Sprintf("%+v %+v %+v , Devide zero!", left, tok.Lexeme, right))
@@ -166,11 +166,11 @@ func checkOps(tok token.Token, left, right any) bool {
 		}
 	} else if _, ok = left.(string); ok {
 		if right, ok := right.(string); !ok {
-			errors.Error(&tok, fmt.Sprintf("%+v %+v %+v , Operands must be  number or string", left, tok.Lexeme, right))
+			errors.Error(&tok, fmt.Sprintf("%+v %+v %+v , Operands must be two numbers or two strings", left, tok.Lexeme, right))
 			return false
 		}
 	} else {
-		errors.Error(&tok, fmt.Sprintf("%+v %+v %+v , Operands must be  number or string", left, tok.Lexeme, right))
+		errors.Error(&tok, fmt.Sprintf("%+v %+v %+v , Operands must be  two numbers or  two strings", left, tok.Lexeme, right))
 		return false
 	}
 	return true
