@@ -40,9 +40,22 @@ func (i *Interpreter) evalStatement(stmt ast.Stmt) any {
 		}
 		i.env.define(stmt.Name.Lexeme, val)
 		return nil
+	case *ast.BlockStmt:
+		return i.evalBlock(stmt.Stmts, NewEnvironment(i.env))
 	default:
 		return nil
 	}
+}
+func (i *Interpreter) evalBlock(stmts []ast.Stmt, env *Environment) (ret any) {
+	previous := i.env
+	defer func() {
+		i.env = previous
+	}()
+	i.env = env
+	for _, stmts := range stmts {
+		ret = i.evalStatement(stmts)
+	}
+	return ret
 }
 func (i *Interpreter) eval(expr ast.Expr) any {
 	switch expr := expr.(type) {

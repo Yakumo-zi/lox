@@ -50,7 +50,20 @@ func (p *Parser) statement() ast.Stmt {
 	if p.match(token.PRINT) {
 		return p.printStatement()
 	}
+	if p.match(token.LEFT_BRACE) {
+		return &ast.BlockStmt{
+			Stmts: p.blockStatement(),
+		}
+	}
 	return p.exprStatement()
+}
+func (p *Parser) blockStatement() []ast.Stmt {
+	stmts := make([]ast.Stmt, 0, 10)
+	for !p.check(token.RIGHT_BRACE) && !p.isAtEnd() {
+		stmts = append(stmts, p.declaration())
+	}
+	p.consume(token.RIGHT_BRACE, "Expect '}' after block.")
+	return stmts
 }
 func (p *Parser) exprStatement() ast.Stmt {
 	expr := p.comma()

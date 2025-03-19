@@ -14,6 +14,9 @@ type VariableStmt struct {
 	Name  token.Token
 	Value Expr
 }
+type BlockStmt struct {
+	Stmts []Stmt
+}
 type VariableNode struct {
 	Name token.Token
 }

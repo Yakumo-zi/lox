@@ -20,7 +20,7 @@ type Lox struct {
 func NewLox(script string) *Lox {
 	return &Lox{
 		script:   script,
-		executor: interpreter.NewInterpreter(interpreter.NewEnvironment()),
+		executor: interpreter.NewInterpreter(interpreter.NewEnvironment(nil)),
 	}
 }
 func (l *Lox) RunFile() error {
