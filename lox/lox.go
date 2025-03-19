@@ -13,12 +13,14 @@ import (
 )
 
 type Lox struct {
-	script string
+	script   string
+	executor *interpreter.Interpreter
 }
 
 func NewLox(script string) *Lox {
 	return &Lox{
-		script: script,
+		script:   script,
+		executor: interpreter.NewInterpreter(interpreter.NewEnvironment()),
 	}
 }
 func (l *Lox) RunFile() error {
@@ -66,13 +68,7 @@ func (l *Lox) run(source string) error {
 	// }
 	par := parser.NewParser(tokens)
 	stmts := par.Parse()
-	for _, stmt := range stmts {
-		ret := interpreter.EvalStatement(stmt)
-		if ret != nil {
-			fmt.Printf("%#v\n", ret)
-		}
-	}
-
+	l.executor.Run(stmts)
 	if len(er.Errors) != 0 {
 		for _, err := range er.Errors {
 			fmt.Printf("%+v\n", err)

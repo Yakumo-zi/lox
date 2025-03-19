@@ -9,39 +9,68 @@ import (
 	"strings"
 )
 
-func EvalStatement(stmt ast.Stmt) any {
+type Interpreter struct {
+	env *Environment
+}
+
+func NewInterpreter(env *Environment) *Interpreter {
+	return &Interpreter{
+		env: env,
+	}
+}
+func (i *Interpreter) Run(stmts []ast.Stmt) (ret any) {
+	for _, stmt := range stmts {
+		ret = i.evalStatement(stmt)
+	}
+	return
+}
+
+func (i *Interpreter) evalStatement(stmt ast.Stmt) any {
 	switch stmt := stmt.(type) {
 	case *ast.ExpressionStmt:
-		return Eval(stmt.Expression)
+		return i.eval(stmt.Expression)
 	case *ast.PrintStmt:
-		val := Eval(stmt.Value)
+		val := i.eval(stmt.Value)
 		fmt.Printf("%#v\n", val)
+		return nil
+	case *ast.VariableStmt:
+		var val any
+		if stmt.Value != nil {
+			val = i.eval(stmt.Value)
+		}
+		i.env.define(stmt.Name.Lexeme, val)
 		return nil
 	default:
 		return nil
 	}
 }
-func Eval(expr ast.Expr) any {
+func (i *Interpreter) eval(expr ast.Expr) any {
 	switch expr := expr.(type) {
 	case *ast.LiteralNode:
-		return evalLiteral(expr)
+		return i.evalLiteral(expr)
 	case *ast.BinaryNode:
-		return evalBinary(expr)
+		return i.evalBinary(expr)
 	case *ast.UnaryNode:
-		return evalUnary(expr)
+		return i.evalUnary(expr)
 	case *ast.GroupNode:
-		return Eval(expr.Expression)
+		return i.eval(expr.Expression)
 	case *ast.ConditionNode:
-		return evalCondition(expr)
+		return i.evalCondition(expr)
+	case *ast.VariableNode:
+		v, _ := i.env.get(expr.Name)
+		return v
+	case *ast.AssignNode:
+		v, _ := i.env.assign(expr.Name, i.eval(expr.Value))
+		return v
 	}
 	return nil
 }
 
-func evalLiteral(expr *ast.LiteralNode) any {
+func (i *Interpreter) evalLiteral(expr *ast.LiteralNode) any {
 	return expr.Value
 }
-func evalUnary(expr *ast.UnaryNode) any {
-	right := Eval(expr.Right)
+func (i *Interpreter) evalUnary(expr *ast.UnaryNode) any {
+	right := i.eval(expr.Right)
 	switch expr.Op.Typ {
 	case token.BANG:
 		return !isTruthy(right)
@@ -53,9 +82,9 @@ func evalUnary(expr *ast.UnaryNode) any {
 	}
 	return nil
 }
-func evalBinary(expr *ast.BinaryNode) any {
-	left := Eval(expr.Left)
-	right := Eval(expr.Right)
+func (i *Interpreter) evalBinary(expr *ast.BinaryNode) any {
+	left := i.eval(expr.Left)
+	right := i.eval(expr.Right)
 	switch expr.Op.Typ {
 	case token.MINUS:
 		if ok := checkOps(expr.Op, left, right); !ok {
@@ -135,10 +164,10 @@ func evalBinary(expr *ast.BinaryNode) any {
 		return nil
 	}
 }
-func evalCondition(expr *ast.ConditionNode) any {
-	cond := Eval(expr.Condition).(bool)
-	t := Eval(expr.Truth)
-	f := Eval(expr.False)
+func (i *Interpreter) evalCondition(expr *ast.ConditionNode) any {
+	cond := i.eval(expr.Condition).(bool)
+	t := i.eval(expr.Truth)
+	f := i.eval(expr.False)
 	return util.When(cond, t, f)
 }
 func isEqual(left, right any) bool {

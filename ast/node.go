@@ -10,7 +10,18 @@ type PrintStmt struct {
 type ExpressionStmt struct {
 	Expression Expr
 }
+type VariableStmt struct {
+	Name  token.Token
+	Value Expr
+}
+type VariableNode struct {
+	Name token.Token
+}
 
+type AssignNode struct {
+	Name  token.Token
+	Value Expr
+}
 type BinaryNode struct {
 	Left  Expr
 	Right Expr

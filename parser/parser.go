@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"lox/ast"
 	"lox/errors"
 	"lox/token"
@@ -20,9 +21,30 @@ func NewParser(tokens []*token.Token) *Parser {
 func (p *Parser) Parse() []ast.Stmt {
 	stmts := make([]ast.Stmt, 0, 10)
 	for !p.isAtEnd() {
-		stmts = append(stmts, p.statement())
+		stmts = append(stmts, p.declaration())
 	}
 	return stmts
+}
+func (p *Parser) declaration() ast.Stmt {
+	if p.match(token.VAR) {
+		return p.varDeclaration()
+	}
+	return p.statement()
+}
+func (p *Parser) varDeclaration() ast.Stmt {
+	name, err := p.consume(token.IDENTIFIER, "Expect variable name.")
+	if err != nil {
+		return nil
+	}
+	var value ast.Expr
+	if p.match(token.EQUAL) {
+		value = p.comma()
+	}
+	p.consume(token.SEMICOLON, "Expect ';' after variable declaration.")
+	return &ast.VariableStmt{
+		Name:  *name,
+		Value: value,
+	}
 }
 func (p *Parser) statement() ast.Stmt {
 	if p.match(token.PRINT) {
@@ -32,14 +54,18 @@ func (p *Parser) statement() ast.Stmt {
 }
 func (p *Parser) exprStatement() ast.Stmt {
 	expr := p.comma()
-	p.consume(token.SEMICOLON, "Expect ';' after expression.")
+	if _, err := p.consume(token.SEMICOLON, "Expect ';' after expression."); err != nil {
+		return nil
+	}
 	return &ast.ExpressionStmt{
 		Expression: expr,
 	}
 }
 func (p *Parser) printStatement() ast.Stmt {
 	value := p.comma()
-	p.consume(token.SEMICOLON, "Expect ';' after value.")
+	if _, err := p.consume(token.SEMICOLON, "Expect ';' after value."); err != nil {
+		return nil
+	}
 	return &ast.PrintStmt{
 		Value: value,
 	}
@@ -52,7 +78,24 @@ func (p *Parser) comma() ast.Expr {
 	return expr
 }
 func (p *Parser) expression() ast.Expr {
-	return p.ternary()
+	return p.assignment()
+}
+func (p *Parser) assignment() ast.Expr {
+	expr := p.ternary()
+	if p.match(token.EQUAL) {
+		equals := p.previous()
+		value := p.assignment()
+		if exp, ok := expr.(*ast.VariableNode); ok {
+			name := exp.Name
+			return &ast.AssignNode{
+				Name:  name,
+				Value: value,
+			}
+		}
+		errors.Error(equals, "Invalid assignment target.")
+		p.sync()
+	}
+	return expr
 }
 func (p *Parser) ternary() ast.Expr {
 	expr := p.equality()
@@ -60,6 +103,8 @@ func (p *Parser) ternary() ast.Expr {
 		left := p.expression()
 		if !p.match(token.COLON) {
 			errors.Error(p.peek(), "Expect a ':'.")
+			p.sync()
+			return nil
 		}
 		right := p.expression()
 		expr = &ast.ConditionNode{
@@ -154,15 +199,23 @@ func (p *Parser) primary() ast.Expr {
 			Value: p.previous().Literal,
 		}
 	}
+	if p.match(token.IDENTIFIER) {
+		return &ast.VariableNode{
+			Name: *p.previous(),
+		}
+	}
 	if p.match(token.LEFT_PAREN) {
 		expr := p.comma()
-		p.consume(token.RIGHT_PAREN, "Expect ')' after expression.")
+		if _, err := p.consume(token.RIGHT_PAREN, "Expect ')' after expression."); err != nil {
+			return nil
+		}
 		return &ast.GroupNode{
 			Expression: expr,
 		}
 
 	}
 	errors.Error(p.peek(), "Expect expression.")
+	p.sync()
 	return nil
 }
 func (p *Parser) sync() {
@@ -192,12 +245,13 @@ func (p *Parser) sync() {
 		p.advance()
 	}
 }
-func (p *Parser) consume(typ token.TokenType, msg string) *token.Token {
+func (p *Parser) consume(typ token.TokenType, msg string) (*token.Token, error) {
 	if p.check(typ) {
-		return p.advance()
+		return p.advance(), nil
 	}
 	errors.Error(p.peek(), msg)
-	return nil
+	p.sync()
+	return nil, fmt.Errorf("%s", msg)
 }
 func (p *Parser) match(types ...token.TokenType) bool {
 	for _, typ := range types {

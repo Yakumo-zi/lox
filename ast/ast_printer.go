@@ -17,6 +17,8 @@ func AstPrinter(expr Expr) string {
 		return literalPrinter(expr)
 	case *ConditionNode:
 		return conditionPrinter(expr)
+	case *VariableNode:
+		return fmt.Sprintf("var %s;", expr.Name.Lexeme)
 	default:
 		return fmt.Sprintf("not a valid node, %+#v", expr)
 	}
