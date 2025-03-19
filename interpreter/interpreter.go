@@ -9,6 +9,18 @@ import (
 	"strings"
 )
 
+func EvalStatement(stmt ast.Stmt) any {
+	switch stmt := stmt.(type) {
+	case *ast.ExpressionStmt:
+		return Eval(stmt.Expression)
+	case *ast.PrintStmt:
+		val := Eval(stmt.Value)
+		fmt.Printf("%#v\n", val)
+		return nil
+	default:
+		return nil
+	}
+}
 func Eval(expr ast.Expr) any {
 	switch expr := expr.(type) {
 	case *ast.LiteralNode:

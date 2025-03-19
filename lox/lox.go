@@ -61,12 +61,18 @@ func (l *Lox) Run() {
 func (l *Lox) run(source string) error {
 	scanner := scanner.NewSacnner(source)
 	tokens := scanner.ScanTokens()
-	for i, tok := range tokens {
-		fmt.Printf("%d : %+v\n", i, tok)
-	}
+	// for i, tok := range tokens {
+	// 	fmt.Printf("%d : %+v\n", i, tok)
+	// }
 	par := parser.NewParser(tokens)
-	expr := par.Parse()
-	fmt.Printf("%#v\n", interpreter.Eval(expr))
+	stmts := par.Parse()
+	for _, stmt := range stmts {
+		ret := interpreter.EvalStatement(stmt)
+		if ret != nil {
+			fmt.Printf("%#v\n", ret)
+		}
+	}
+
 	if len(er.Errors) != 0 {
 		for _, err := range er.Errors {
 			fmt.Printf("%+v\n", err)

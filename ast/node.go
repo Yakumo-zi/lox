@@ -4,6 +4,13 @@ import (
 	"lox/token"
 )
 
+type PrintStmt struct {
+	Value any
+}
+type ExpressionStmt struct {
+	Expression Expr
+}
+
 type BinaryNode struct {
 	Left  Expr
 	Right Expr
