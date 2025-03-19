@@ -18,49 +18,65 @@ func NewInterpreter(env *Environment) *Interpreter {
 		env: env,
 	}
 }
-func (i *Interpreter) Run(stmts []ast.Stmt) (ret any) {
+func (i *Interpreter) Run(stmts []ast.Stmt) (ret any, err error) {
 	for _, stmt := range stmts {
-		ret = i.evalStatement(stmt)
+		ret, err = i.evalStatement(stmt)
+		if err != nil {
+			return
+		}
 	}
 	return
 }
 
-func (i *Interpreter) evalStatement(stmt ast.Stmt) any {
+func (i *Interpreter) evalStatement(stmt ast.Stmt) (any, error) {
 	switch stmt := stmt.(type) {
 	case *ast.ExpressionStmt:
 		return i.eval(stmt.Expression)
 	case *ast.PrintStmt:
-		val := i.eval(stmt.Value)
+		val, err := i.eval(stmt.Value)
+		if err != nil {
+			return nil, err
+		}
+		if val == nil {
+			fmt.Printf("Error, <nil> pointer deref!\n")
+		}
 		fmt.Printf("%#v\n", val)
-		return nil
+		return nil, nil
 	case *ast.VariableStmt:
 		var val any
 		if stmt.Value != nil {
-			val = i.eval(stmt.Value)
+			var err error
+			val, err = i.eval(stmt.Value)
+			if err != nil {
+				return nil, err
+			}
 		}
 		i.env.define(stmt.Name.Lexeme, val)
-		return nil
+		return nil, nil
 	case *ast.BlockStmt:
 		return i.evalBlock(stmt.Stmts, NewEnvironment(i.env))
 	default:
-		return nil
+		return nil, nil
 	}
 }
-func (i *Interpreter) evalBlock(stmts []ast.Stmt, env *Environment) (ret any) {
+func (i *Interpreter) evalBlock(stmts []ast.Stmt, env *Environment) (ret any, err error) {
 	previous := i.env
 	defer func() {
 		i.env = previous
 	}()
 	i.env = env
 	for _, stmts := range stmts {
-		ret = i.evalStatement(stmts)
+		ret, err = i.evalStatement(stmts)
+		if err != nil {
+			return nil, err
+		}
 	}
-	return ret
+	return
 }
-func (i *Interpreter) eval(expr ast.Expr) any {
+func (i *Interpreter) eval(expr ast.Expr) (any, error) {
 	switch expr := expr.(type) {
 	case *ast.LiteralNode:
-		return i.evalLiteral(expr)
+		return i.evalLiteral(expr), nil
 	case *ast.BinaryNode:
 		return i.evalBinary(expr)
 	case *ast.UnaryNode:
@@ -70,118 +86,140 @@ func (i *Interpreter) eval(expr ast.Expr) any {
 	case *ast.ConditionNode:
 		return i.evalCondition(expr)
 	case *ast.VariableNode:
-		v, _ := i.env.get(expr.Name)
-		return v
+		return i.env.get(expr.Name)
 	case *ast.AssignNode:
-		v, _ := i.env.assign(expr.Name, i.eval(expr.Value))
-		return v
+		val, err := i.eval(expr.Value)
+		if err != nil {
+			return nil, err
+		}
+		v, _ := i.env.assign(expr.Name, val)
+		return v, nil
 	}
-	return nil
+	return nil, nil
 }
 
 func (i *Interpreter) evalLiteral(expr *ast.LiteralNode) any {
 	return expr.Value
 }
-func (i *Interpreter) evalUnary(expr *ast.UnaryNode) any {
-	right := i.eval(expr.Right)
+func (i *Interpreter) evalUnary(expr *ast.UnaryNode) (any, error) {
+	right, err := i.eval(expr.Right)
+	if err != nil {
+		return nil, err
+	}
 	switch expr.Op.Typ {
 	case token.BANG:
-		return !isTruthy(right)
+		return !isTruthy(right), nil
 	case token.MINUS:
 		if ok := checkOp(expr.Op, right); !ok {
-			return nil
+			return nil, fmt.Errorf("%+v Operand must be a number", expr.Op.Lexeme)
 		}
-		return -right.(float64)
+		return -right.(float64), nil
 	}
-	return nil
+	return nil, nil
 }
-func (i *Interpreter) evalBinary(expr *ast.BinaryNode) any {
-	left := i.eval(expr.Left)
-	right := i.eval(expr.Right)
+func (i *Interpreter) evalBinary(expr *ast.BinaryNode) (any, error) {
+	left, err := i.eval(expr.Left)
+	if err != nil {
+		return nil, err
+	}
+	right, err := i.eval(expr.Right)
+	if err != nil {
+		return nil, err
+	}
 	switch expr.Op.Typ {
 	case token.MINUS:
 		if ok := checkOps(expr.Op, left, right); !ok {
-			return nil
+			return nil, fmt.Errorf("%+v Operands must be numbers or strings", expr.Op)
 		}
-		return left.(float64) - right.(float64)
+		return left.(float64) - right.(float64), nil
 	case token.PLUS:
 		switch left.(type) {
 		case string:
 			if right, ok := right.(float64); ok {
-				return fmt.Sprintf("%s%+v", left, right)
+				return fmt.Sprintf("%s%+v", left, right), nil
 			}
 			if _, ok := right.(string); ok {
-				return left.(string) + right.(string)
+				return left.(string) + right.(string), nil
 			}
 			errors.Error(&expr.Op, fmt.Sprintf("%+v Operands must be  numbers or strings.", expr.Op))
+			return nil, fmt.Errorf("%+v Operands must be  numbers or strings.", expr.Op)
 
 		case float64:
 			if right, ok := right.(string); ok {
-				return fmt.Sprintf("%+v%s", left, right)
+				return fmt.Sprintf("%+v%s", left, right), nil
 			}
 			if _, ok := right.(float64); ok {
 
-				return left.(float64) + right.(float64)
+				return left.(float64) + right.(float64), nil
 			}
 			errors.Error(&expr.Op, fmt.Sprintf("%+v Operands must be  numbers or  strings.", expr.Op))
 		}
 		errors.Error(&expr.Op, fmt.Sprintf("%+v Operands must be  numbers or  strings.", expr.Op))
-		return nil
+		return nil, fmt.Errorf("%+v Operands must be  numbers or  strings.", expr.Op)
 	case token.SLASH:
 		if ok := checkOps(expr.Op, left, right); !ok {
-			return nil
+			return nil, fmt.Errorf("%+v Operands must be numbers", expr.Op)
 		}
-		return left.(float64) / right.(float64)
+		return left.(float64) / right.(float64), nil
 	case token.STAR:
 		if ok := checkOps(expr.Op, left, right); !ok {
-			return nil
+			return nil, fmt.Errorf("%+v Operands must be numbers", expr.Op)
 		}
-		return left.(float64) * right.(float64)
+		return left.(float64) * right.(float64), nil
 	case token.GREATER:
 		if ok := checkOps(expr.Op, left, right); !ok {
-			return nil
+			return nil, fmt.Errorf("%+v Operands must be numbers or strings", expr.Op)
 		}
 		if left, ok := left.(string); ok {
-			return strings.Compare(left, right.(string)) > 0
+			return strings.Compare(left, right.(string)) > 0, nil
 		}
-		return left.(float64) > right.(float64)
+		return left.(float64) > right.(float64), nil
 	case token.GREATER_EQUAL:
 		if ok := checkOps(expr.Op, left, right); !ok {
-			return nil
+			return nil, fmt.Errorf("%+v Operands must be numbers or strings", expr.Op)
 		}
 		if left, ok := left.(string); ok {
-			return strings.Compare(left, right.(string)) >= 0
+			return strings.Compare(left, right.(string)) >= 0, nil
 		}
-		return left.(float64) >= right.(float64)
+		return left.(float64) >= right.(float64), nil
 	case token.LESS:
 		if ok := checkOps(expr.Op, left, right); !ok {
-			return nil
+			return nil, fmt.Errorf("%+v Operands must be numbers or strings", expr.Op)
 		}
 		if left, ok := left.(string); ok {
-			return strings.Compare(left, right.(string)) < 0
+			return strings.Compare(left, right.(string)) < 0, nil
 		}
-		return left.(float64) < right.(float64)
+		return left.(float64) < right.(float64), nil
 	case token.LESS_EQUAL:
 		if ok := checkOps(expr.Op, left, right); !ok {
-			return nil
+			return nil, fmt.Errorf("%+v Operands must be numbers or strings", expr.Op)
 		}
 		if left, ok := left.(string); ok {
-			return strings.Compare(left, right.(string)) <= 0
+			return strings.Compare(left, right.(string)) <= 0, nil
 		}
-		return left.(float64) <= right.(float64)
+		return left.(float64) <= right.(float64), nil
 	case token.EQUAL_EQUAL:
-		return isEqual(left, right)
+		return isEqual(left, right), nil
 	case token.BANG_EQUAL:
-		return !isEqual(left, right)
+		return !isEqual(left, right), nil
 	default:
-		return nil
+		return nil, fmt.Errorf("not supported operator %#v", expr.Op.Lexeme)
 	}
 }
-func (i *Interpreter) evalCondition(expr *ast.ConditionNode) any {
-	cond := i.eval(expr.Condition).(bool)
-	t := i.eval(expr.Truth)
-	f := i.eval(expr.False)
-	return util.When(cond, t, f)
+func (i *Interpreter) evalCondition(expr *ast.ConditionNode) (any, error) {
+	cond, err := i.eval(expr.Condition)
+	if err != nil {
+		return nil, err
+	}
+	t, err := i.eval(expr.Truth)
+	if err != nil {
+		return nil, err
+	}
+	f, err := i.eval(expr.False)
+	if err != nil {
+		return nil, err
+	}
+	return util.When(cond.(bool), t, f), nil
 }
 func isEqual(left, right any) bool {
 	if left == nil && right == nil {
@@ -219,6 +257,10 @@ func checkOps(tok token.Token, left, right any) bool {
 			return false
 		}
 	} else if _, ok = left.(string); ok {
+		if tok.Typ == token.STAR || tok.Typ == token.SLASH || tok.Typ == token.MINUS {
+			errors.Error(&tok, fmt.Sprintf("%+v %+v %+v , Operands must be two numbers ", left, tok.Lexeme, right))
+			return false
+		}
 		if right, ok := right.(string); !ok {
 			errors.Error(&tok, fmt.Sprintf("%+v %+v %+v , Operands must be two numbers or two strings", left, tok.Lexeme, right))
 			return false

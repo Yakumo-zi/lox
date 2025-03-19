@@ -68,7 +68,13 @@ func (l *Lox) run(source string) error {
 	// }
 	par := parser.NewParser(tokens)
 	stmts := par.Parse()
-	l.executor.Run(stmts)
+	ret, err := l.executor.Run(stmts)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+	}
+	if ret != nil {
+		fmt.Printf("%#v\n", ret)
+	}
 	if len(er.Errors) != 0 {
 		for _, err := range er.Errors {
 			fmt.Printf("%+v\n", err)

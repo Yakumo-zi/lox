@@ -2,7 +2,6 @@ package interpreter
 
 import (
 	"fmt"
-	"lox/errors"
 	"lox/token"
 )
 
@@ -27,12 +26,10 @@ func (e *Environment) get(name token.Token) (any, error) {
 	if e.enclosing != nil {
 		return e.enclosing.get(name)
 	}
-	errors.Error(&name, fmt.Sprintf("Undefined variable '%s'.", name.Lexeme))
 	return nil, fmt.Errorf("Undefined variable '%s'.", name.Lexeme)
 }
 func (e *Environment) assign(name token.Token, value any) (any, error) {
 	if _, ok := e.values[name.Lexeme]; !ok {
-		errors.Error(&name, fmt.Sprintf("Undefined variable '%s'.", name.Lexeme))
 		return nil, fmt.Errorf("Undefined variable '%s'.", name.Lexeme)
 	}
 	if e.enclosing != nil {
