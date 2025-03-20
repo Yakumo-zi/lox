@@ -47,6 +47,9 @@ func (p *Parser) varDeclaration() ast.Stmt {
 	}
 }
 func (p *Parser) statement() ast.Stmt {
+	if p.match(token.IF) {
+		return p.ifStatement()
+	}
 	if p.match(token.PRINT) {
 		return p.printStatement()
 	}
@@ -56,6 +59,21 @@ func (p *Parser) statement() ast.Stmt {
 		}
 	}
 	return p.exprStatement()
+}
+func (p *Parser) ifStatement() ast.Stmt {
+	p.consume(token.LEFT_PAREN, "Expect '(' after 'if'.")
+	cond := p.comma()
+	p.consume(token.RIGHT_PAREN, "Expect ')' after if condition.")
+	then := p.statement()
+	var elseBranch ast.Stmt
+	if p.match(token.ELSE) {
+		elseBranch = p.statement()
+	}
+	return &ast.IfStmt{
+		Cond: cond,
+		Then: then,
+		Else: elseBranch,
+	}
 }
 func (p *Parser) blockStatement() []ast.Stmt {
 	stmts := make([]ast.Stmt, 0, 10)

@@ -55,6 +55,17 @@ func (i *Interpreter) evalStatement(stmt ast.Stmt) (any, error) {
 		return nil, nil
 	case *ast.BlockStmt:
 		return i.evalBlock(stmt.Stmts, NewEnvironment(i.env))
+	case *ast.IfStmt:
+		cond, err := i.eval(stmt.Cond)
+		if err != nil {
+			return nil, err
+		}
+		if isTruthy(cond) {
+			return i.evalStatement(stmt.Then)
+		} else if stmt.Else != nil {
+			return i.evalStatement(stmt.Else)
+		}
+		return nil, nil
 	default:
 		return nil, nil
 	}

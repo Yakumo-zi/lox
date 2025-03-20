@@ -17,6 +17,11 @@ type VariableStmt struct {
 type BlockStmt struct {
 	Stmts []Stmt
 }
+type IfStmt struct {
+	Cond Expr
+	Then Stmt
+	Else Stmt
+}
 type VariableNode struct {
 	Name token.Token
 }
